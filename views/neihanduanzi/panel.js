@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Image, Text, StyleSheet, Dimensions } from 'react-native'
+import { View, Modal, Image, Text, StyleSheet, Dimensions, TouchableWithoutFeedback, ScrollView } from 'react-native'
 
 
 import Button from '../../widgets/_Button'
@@ -10,10 +10,60 @@ import AvatarNickname from './avatar-nickname'
 export default class Panel extends React.Component {
     constructor(props) {
         super(props)
+        // this.ImageCom = this.ImageCom.bind(this)
+        // this.HotComments = this.HotComments.bind(this)
+        
     }
-    render() {
+    state = {
+        modalVisible: false,
+    };
+
+    setModalVisible(visible) {
+        this.setState({ modalVisible: visible });
+    }
+    loadingImageStart() {
+        console.log(arguments, 'loading')
+    }
+    ImageCom() {
+        const { large_image } = this.props._data
         const { width } = Dimensions.get('window')
-        const HotComments = (
+        const ratio = large_image.width / large_image.height
+        const height = parseInt(width / ratio)
+
+        return (
+            <View style={styles.imgContainer}>
+                <Image
+                    onLoadStart={this.loadingImageStart()}
+                    source={{ uri: large_image.url_list[0].url }}
+                    style={{ width: width - 24, height }}
+                />
+                {height > 600 && <Text
+                    style={styles.viewLongImageBtn}
+                    onPress={() => this.setModalVisible(!this.state.modalVisible)}
+                >
+                    点击查看长图
+                </Text>}
+
+                <Modal
+                    // style={styles.fullModal}
+                    animationType="slide"
+                    transparent={true}
+                    visible={this.state.modalVisible}
+                    onRequestClose={() => {
+                        this.setModalVisible(false)
+                    }}>
+                    <ScrollView style={styles.modalView}>
+                        <Image
+                            source={{ uri: large_image.url_list[0].url }}
+                            style={{ width, height }}
+                        />
+                    </ScrollView>
+                </Modal>
+            </View>
+        )
+    }
+    HotComments() {
+        return (
             <View style={styles.commentContainer}>
                 <Text style={styles.commentTag}>神评论</Text>
                 {this.props._hotComments.map(item => {
@@ -30,13 +80,8 @@ export default class Panel extends React.Component {
                 })}
             </View>
         )
-
-        const ImageCom = this.props._type === 'image' ?
-            <Image
-                source={{ uri: this.props._data.large_image.url_list[0].url }}
-                style={{ width, height: 300 }}
-            ></Image> : null
-
+    }
+    render() {
         return (
             <View style={styles.panel}>
                 <AvatarNickname
@@ -45,12 +90,12 @@ export default class Panel extends React.Component {
                 // _avatarNicknameStyle={}
                 />
                 <Text style={styles.description}>{this.props._data.content}</Text>
-                {this.props._type === 'image' && ImageCom}
+                {this.props._type === 'image' && this.ImageCom()}
                 <View style={styles.tagContainer}>
                     <Text style={styles.tag}>{this.props._data.category_name}</Text>
                 </View>
 
-                {this.props._hotComments.length > 0 && HotComments}
+                {this.props._hotComments.length > 0 && this.HotComments()}
                 <View style={styles.iconBar}>
                     <Button
                         _style={StyleSheet.flatten(styles.iconBtn)}
@@ -160,6 +205,29 @@ const styles = StyleSheet.create({
     },
     iconBtn: {
         borderWidth: 0,
+    },
+    imgContainer: {
+        position: 'relative',
+        maxHeight: 600,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'red',
+        marginTop: 10
+    },
+    viewLongImageBtn: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 50,
+        lineHeight: 50,
+        textAlign: 'center',
+        color: '#fff',
+        backgroundColor: 'rgba(0,0,0,.5)'
+    },
+    modalView: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,.8)'
     }
 
 })
