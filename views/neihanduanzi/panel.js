@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Image, Text, StyleSheet } from 'react-native'
+import { View, Image, Text, StyleSheet, Dimensions } from 'react-native'
 
 
 import Button from '../../widgets/_Button'
@@ -12,8 +12,8 @@ export default class Panel extends React.Component {
         super(props)
     }
     render() {
-  
-        const HotComments =  (
+        const { width } = Dimensions.get('window')
+        const HotComments = (
             <View style={styles.commentContainer}>
                 <Text style={styles.commentTag}>神评论</Text>
                 {this.props._hotComments.map(item => {
@@ -30,6 +30,13 @@ export default class Panel extends React.Component {
                 })}
             </View>
         )
+
+        const ImageCom = this.props._type === 'image' ?
+            <Image
+                source={{ uri: this.props._data.large_image.url_list[0].url }}
+                style={{ width, height: 300 }}
+            ></Image> : null
+
         return (
             <View style={styles.panel}>
                 <AvatarNickname
@@ -38,11 +45,12 @@ export default class Panel extends React.Component {
                 // _avatarNicknameStyle={}
                 />
                 <Text style={styles.description}>{this.props._data.content}</Text>
+                {this.props._type === 'image' && ImageCom}
                 <View style={styles.tagContainer}>
                     <Text style={styles.tag}>{this.props._data.category_name}</Text>
                 </View>
 
-                {this.props._hotComments.length >0 && HotComments}
+                {this.props._hotComments.length > 0 && HotComments}
                 <View style={styles.iconBar}>
                     <Button
                         _style={StyleSheet.flatten(styles.iconBtn)}
@@ -97,8 +105,8 @@ const styles = StyleSheet.create({
         width: "100%",
         borderWidth: 0,
         height: 'auto',
-        fontSize:14,
-        lineHeight:22
+        fontSize: 14,
+        lineHeight: 22
     },
     tagContainer: {
         alignItems: 'flex-start'
