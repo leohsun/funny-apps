@@ -61,7 +61,7 @@ async function createDir(cate) {
 
 // 3.下载文件
 
-export async function downFile(categroy, url) {
+export async function downLoadFile(categroy, url) {
     if (typeof url === 'undefinde') return console.error('请配置文件远程路径')
     const fileExt = url.match(/\.\S+$/)[0] ? url.match(/\.\S+$/)[0] : (categroy === 'image' ? '.gif' : '.ext')
     const fileNameAndExt = url.match(/\/[^\/]+(\.[^\.]+)?$/)[0]
