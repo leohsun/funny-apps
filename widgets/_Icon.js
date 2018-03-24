@@ -8,7 +8,7 @@ const glyphMap = {
     tubiaozhizuomoban: 58914, message: 58917,
     arrowtop: 58919, loadingout: 58920, arrowdown: 58921,
     profile: 58928, shoucang: 58931, arrowleft: 58934,
-    htmal5icon23: 58939, weibiaoti555: 58940, cai: 59077,
+    htmal5icon23: 58939, weibiaoti555: 58940, deny: 59077,
     commend: 59078, share: 58968, previewright: 59228, plus: 59107,
     copy: 58911, x: 120
 }
