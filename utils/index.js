@@ -1,4 +1,4 @@
-export const $http= {
+export const $http = {
     get(url) {
         return new Promise((resolve, reject) => {
             fetch(url)
@@ -30,27 +30,27 @@ import RNFB from 'react-native-fetch-blob'
 
 // 1.创建路径
 
-async function createDir(cate) {
+export async function createDir(cate) {
     try {
         const categroy = cate || 'common'
         const { SDCardDir } = RNFB.fs.dirs
         const targetDir = SDCardDir + '/FunnyApps/' + categroy
         // 文件夹创建
-        const isExists =  RNFB.fs.exists(targetDir)
-        if(isExists){
+        const isExists = await checkFileExists(targetDir)
+        if (isExists) {
             return targetDir
         }
         const created = RNFB.fs.mkdir(targetDir)
-        if(created){
-            return targetDir 
-        }        
+        if (created) {
+            return targetDir
+        }
     } catch (err) {
         console.error('创建文件夹失败:' + err)
     }
 }
 
 // 2.判断文件是否存在
- async function cheakFileExists(filePath) {
+export async function checkFileExists(filePath) {
     try {
         return await RNFB.fs.exists(filePath)
     } catch (err) {
@@ -63,27 +63,27 @@ async function createDir(cate) {
 
 export async function downLoadFile(categroy, url) {
     if (typeof url === 'undefinde') return console.error('请配置文件远程路径')
-    const fileExt = url.match(/\.\S+$/)[0] ? url.match(/\.\S+$/)[0] : (categroy === 'image' ? '.gif' : '.ext')
-    const fileNameAndExt = url.match(/\/[^\/]+(\.[^\.]+)?$/)[0]
-    
+
+    const fileName = url.match(/\/[^\/]+(\.[^\.\/]+)?$/)[0]
+    const fileExt = fileName.match(/\.[^\.]+$/) ? fileNameAndExt.match(/\.[^\.]+$/)[0] : (categroy === 'image' ? '.gif' : '.ext')
+
     const fileDir = await createDir(categroy)
-    console.log(fileDir, fileNameAndExt)
+    console.log(fileDir, url, fileName, fileExt)
     if (!fileDir) {
         console.error('文件件创建失败')
-        return 
+        return
     }
-    const isFileExists = await cheakFileExists(fileDir +fileNameAndExt)
-    if(isFileExists){
+    const isFileExists = await cheakFileExists(fileDir + fileName + fileExt)
+    if (isFileExists) {
         return console.warn('文件已保存')
     }
     RNFB.config({
-        fileCache : true,
-        path: fileDir + '/'+fileNameAndExt,
+        fileCache: true,
+        path: fileDir + fileName + fileExt,
     })
-    .fetch('GET',url)
-    .then(res=>alert('文件保存于'+ res.path()))
-    .catch(err=>console.error(err))
+        .fetch('GET', url)
+        .then(res => alert('文件保存于' + res.path()))
+        .catch(err => console.error(err))
 }
 
 
- 
