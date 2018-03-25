@@ -1,28 +1,87 @@
 import React from 'react'
-import { View, Modal, Image, Text, StyleSheet, Dimensions, TouchableWithoutFeedback, ScrollView } from 'react-native'
+import {
+    View,
+    Modal,
+    Text,
+    Image,
+    StyleSheet,
+    Dimensions,
+    ScrollView,
+    NativeModules
+} from 'react-native'
+import Video from 'react-native-video'
+import RNFB from 'react-native-fetch-blob'
+import { checkFileExists, createDir } from '../../utils/'
 
+import _Image from '../../widgets/_Image'
 
+import Gesture from '../../widgets/_gesture'
 import Button from '../../widgets/_Button'
 import Comment from './comment'
 import AvatarNickname from './avatar-nickname'
+import VideoCom from './videoCom'
+
 
 
 export default class Panel extends React.Component {
-    constructor(props) {
-        super(props)
-        // this.ImageCom = this.ImageCom.bind(this)
-        // this.HotComments = this.HotComments.bind(this)
-        
+    constructor() {
+        super(...arguments)
     }
     state = {
         modalVisible: false,
+        imgLoading: false,
+        imgLoadErr: false,
+        imgLoad: false,
+        imageExt: '',
+        imageName: '',
+        cachePath: ''
     };
 
-    setModalVisible(visible) {
-        this.setState({ modalVisible: visible });
+    setModalVisible(visiable) {
+        this.setState({ modalVisible: visiable });
     }
-    loadingImageStart() {
-        console.log(arguments, 'loading')
+
+
+    async saveImage() {
+        try {
+            const { DocumentDir } = RNFB.fs.dirs
+            const destDir = DocumentDir + '/funyApp/savedFiles/image'
+            const fullPath = destDir + `/${this.state.imageName}`
+            const isExists = await checkFileExists(fullPath)
+            
+            if (isExists) {
+                return alert('文件已存在:' + fullPath)
+            }
+            const createdDir = await createDir('image')
+            console.log(this.state.cachePath,'cachepath',)
+            console.log(createdDir,`createdpath-${this.state.imageName}-${this.state.imageExt}`)
+            if (createdDir) {
+                const targetPath = createdDir +`/${this.state.imageName}.${this.state.imageExt}`
+                const isSaved = await checkFileExists(targetPath)
+                if(isSaved) return alert('图片已存在于:'+ targetPath)
+                RNFB.fs.cp(this.state.cachePath, targetPath)
+                .then(res=>{
+                    // RNFB.fs.scanFile(createdPath) //scan files
+                    alert(`保存成功!路径:${targetPath}`)
+                })
+                .catch(err=>console.error(err))
+            }
+        } catch (err) {
+            alert(err)
+        }
+    }
+    showLargeImage() {
+        this.setState({ modalVisible: true })
+    }
+    saveCache(cache) {
+        if (typeof cache !== 'object') return
+        const { path, extension, fileName } = cache
+        this.setState({
+            imageExt: extension,
+            cachePath: path,
+            imageName: fileName
+        })
+
     }
     ImageCom() {
         const { large_image } = this.props._data
@@ -32,36 +91,69 @@ export default class Panel extends React.Component {
 
         return (
             <View style={styles.imgContainer}>
-                <Image
-                    onLoadStart={this.loadingImageStart()}
-                    source={{ uri: large_image.url_list[0].url }}
-                    style={{ width: width - 24, height }}
+                <_Image
+                    source={large_image.url_list[0].url}
+                    style={{ width: width - 32, height }}
+                    onLoadStart={_ => this.setState({ imgLoading: true, imgLoad: false, imageLoadErr: false })}
+                    onLoad={_ => this.setState({ imgLoad: true, imgLoading: false, imageLoadErr: false })}
+                    onError={_ => this.setState({ imgLoadErr: true, imgLoad: false })}
+                    getCache={cache => this.saveCache(cache)}
                 />
-                {height > 600 && <Text
+                {/* 加载提示 */}
+                {this.state.imgLoading && <Text style={styles.imgLoadTips}>图片加载中...</Text>}
+                {this.state.imgLoadErr && <Text style={styles.imgLoadTips}>图片加载失败...</Text>}
+
+                {/* 长图 */}
+                {height > 300 && this.state.imgLoad && <Text
                     style={styles.viewLongImageBtn}
-                    onPress={() => this.setModalVisible(!this.state.modalVisible)}
+                    onPress={_ => this.showLargeImage()}
                 >
                     点击查看长图
                 </Text>}
 
                 <Modal
-                    // style={styles.fullModal}
-                    animationType="slide"
+                    style={styles.fullModal}
                     transparent={true}
                     visible={this.state.modalVisible}
-                    onRequestClose={() => {
-                        this.setModalVisible(false)
-                    }}>
-                    <ScrollView style={styles.modalView}>
-                        <Image
-                            source={{ uri: large_image.url_list[0].url }}
-                            style={{ width, height }}
+                    onRequestClose={() => this.setState({ modalVisible: false })}
+                >
+                    <View style={styles.modalToolbar}>
+                        <Button
+                            _text="返回"
+                            _textStyle={{ color: '#ff819f' }}
+                            _icon="arrowleft"
+                            _iconColor="#ff819f"
+                            _style={{ borderWidth: 0 }}
+                            _onPress={_ => this.setState({ modalVisible: false })}
                         />
-                    </ScrollView>
+                        <Button
+                            _text="保存"
+                            _textStyle={{ color: '#ff819f' }}
+                            _icon="shoucang"
+                            _iconColor="#ff819f"
+                            _style={{ borderWidth: 0 }}
+                            _onPress={_ => this.saveImage()}
+                        />
+
+                    </View>
+                    <Gesture
+                        ratio={ratio}
+                        renderItem={
+                            props => (
+                                <Image
+                                    source={{ uri: this.state.cachePath }}
+                                    {...props}
+                                />
+                            )
+                        }
+                    />
                 </Modal>
+
             </View>
         )
     }
+
+
     HotComments() {
         return (
             <View style={styles.commentContainer}>
@@ -81,16 +173,20 @@ export default class Panel extends React.Component {
             </View>
         )
     }
+
     render() {
+        const { user } = this.props._data
         return (
             <View style={styles.panel}>
                 <AvatarNickname
-                    _avatar={this.props._data.user.avatar_url}
-                    _nickname={this.props._data.user.name}
+                    _avatar={user.avatar_url}
+                    _nickname={user.name}
                 // _avatarNicknameStyle={}
                 />
                 <Text style={styles.description}>{this.props._data.content}</Text>
                 {this.props._type === 'image' && this.ImageCom()}
+                {this.props._type === 'video' && <VideoCom _data={this.props._data}></VideoCom>}
+
                 <View style={styles.tagContainer}>
                     <Text style={styles.tag}>{this.props._data.category_name}</Text>
                 </View>
@@ -100,28 +196,24 @@ export default class Panel extends React.Component {
                     <Button
                         _style={StyleSheet.flatten(styles.iconBtn)}
                         _icon='commend'
-                        _iconStyle={StyleSheet.flatten(styles.iconStyle)}
                         _textStyle={{ color: "#ccc" }}
                         _text={`${this.props._data.digg_count}`}
                     />
                     <Button
                         _style={StyleSheet.flatten(styles.iconBtn)}
                         _icon='deny'
-                        _iconStyle={StyleSheet.flatten(styles.iconStyle)}
                         _textStyle={{ color: "#ccc" }}
                         _text={`${this.props._data.bury_count}`}
                     />
                     <Button
                         _style={StyleSheet.flatten(styles.iconBtn)}
                         _icon='comment'
-                        _iconStyle={StyleSheet.flatten(styles.iconStyle)}
                         _textStyle={{ color: "#ccc" }}
                         _text={`${this.props._data.comment_count}`}
                     />
                     <Button
                         _style={StyleSheet.flatten(styles.iconBtn)}
                         _icon='share'
-                        _iconStyle={StyleSheet.flatten(styles.iconStyle)}
                         _textStyle={{ color: "#ccc" }}
                         _text={`${this.props._data.share_count}`}
                     />
@@ -136,7 +228,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#fdfdfd',
         borderWidth: 1,
         borderColor: '#f0f0f0',
-        padding: 12
+        padding: 12,
+        paddingLeft: 16,
+        paddingRight: 16
     },
     userBtn: {
         width: '100%',
@@ -196,23 +290,26 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between'
     },
-    iconStyle: {
 
-        width: 18,
-        height: 18,
-        marginRight: 6,
-        tintColor: '#ccc'
-    },
     iconBtn: {
         borderWidth: 0,
     },
     imgContainer: {
         position: 'relative',
+        width: '100%',
         maxHeight: 600,
         overflow: 'hidden',
+        marginTop: 10,
         borderWidth: 1,
-        borderColor: 'red',
-        marginTop: 10
+        borderColor: '#fff'
+    },
+    imgLoadTips: {
+        position: 'absolute',
+        width: 100,
+        left: '50%',
+        top: '50%',
+        transform: [{ translateX: -50 }, { translateY: -50 }],
+        color: '#ff819f'
     },
     viewLongImageBtn: {
         position: 'absolute',
@@ -228,6 +325,19 @@ const styles = StyleSheet.create({
     modalView: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,.8)'
+    },
+    fullModal: {
+        position: 'absolute'
+    },
+    modalToolbar: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(0,0,0,.6)',
+        position: 'absolute',
+        zIndex: 1,
+        left: 0,
+        right: 0,
+        top: 0,
+        height: 30,
+        justifyContent: 'space-between'
     }
-
 })
